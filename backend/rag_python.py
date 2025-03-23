@@ -13,8 +13,8 @@ def gpt_call(step:list[str], assumption: list[str], maestro_output):
                 "content": (
                     f"Given the steps: {step}, the assumptions: {assumption}, "
                     f"and the output: {maestro_output}, determine whether the output is correct. "
-                    "Respond ONLY with a single digit: 1 if correct, 0 if incorrect. "
-                    "Do not include any explanation or extra text."
+                    "Respond ONLY with a single digit: 1 if correct. "
+                    "If incorrect return an explaination of why it failed"
                 )
             }
         ]
