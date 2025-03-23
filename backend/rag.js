@@ -6,7 +6,7 @@ const openaiClient = new OpenAI({
 });
 
 const ai21Client = new AI21({
-    apiKey: "Rqg7b1DrThlWiliYDBQLL5QQ9Xt3QNqS"
+    apiKey: test
 });
 
 async function gptCall(theorem, assumption, maestroOutput) {
