@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with geometric pattern -->
+  <rect width="32" height="32" rx="4" fill="#1e293b"/>
+  
+  <!-- Subtle grid pattern representing mathematical grid/graph -->
+  <path d="M4 4h24v24H4z" fill="none" stroke="#334155" stroke-width="0.5"/>
+  <path d="M4 12h24M4 20h24M12 4v24M20 4v24" stroke="#334155" stroke-width="0.5"/>
+  
+  <!-- Letter H for Hilbertron with mathematical symbols -->
+  <path d="M10 8v16M22 8v16M10 16h12" stroke="#e2e8f0" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <!-- Mathematical symbol: sigma -->
+  <path d="M26 6l-2 2.5 2 2.5" stroke="#0ea5e9" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Mathematical symbol: pi -->
+  <path d="M6 21h4M6 23v-2M10 23v-2" stroke="#0ea5e9" stroke-width="1" stroke-linecap="round"/>
+</svg>
