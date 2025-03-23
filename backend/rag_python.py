@@ -38,7 +38,7 @@ def maestro_rag(step: list[str], assumptions: list[str]):
             # The output was correct — handle accordingly
             return "success"
         else:
-            return "failure"
+             return f"failure: {check}" 
     except ValueError:
         print(f"Unexpected model output: {check}")
         return "error"
