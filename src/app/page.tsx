@@ -3,6 +3,24 @@
 import { useState } from 'react';
 import ProofTree from './components/ProofTree';
 
+// Define LemmaStatus type to match ProofTree component
+type LemmaStatus = 'pending' | 'verifying' | 'verified' | 'failed';
+
+// Define ProofTree and Lemma interfaces
+interface Lemma {
+  id: string;
+  statement: string;
+  status: LemmaStatus;
+  proof?: string;
+  lemmas?: Lemma[];
+}
+
+interface ProofTreeType {
+  theorem: string;
+  status: LemmaStatus;
+  lemmas: Lemma[];
+}
+
 // Assumption sets available for theorem proving
 const ASSUMPTION_SETS = [
   { id: 'basic', name: 'Basic Assumptions' },
@@ -13,11 +31,11 @@ const ASSUMPTION_SETS = [
 ];
 
 export default function Home() {
-  const [theorem, setTheorem] = useState('');
-  const [selectedAssumption, setSelectedAssumption] = useState('basic');
-  const [proofTree, setProofTree] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [theorem, setTheorem] = useState<string>('');
+  const [selectedAssumption, setSelectedAssumption] = useState<string>('basic');
+  const [proofTree, setProofTree] = useState<ProofTreeType | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +57,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           theorem,
-          assumptions: selectedAssumption,
+          assumptionSet: selectedAssumption,
         }),
       });
       
