@@ -1,7 +1,86 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openaiClient = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+});
+
+// Define proper interface for the proof tree structure
+interface Lemma {
+  id: string;
+  statement: string;
+  status: string;
+  proof?: string;
+  lemmas?: Lemma[];
+}
+
+interface ProofTree {
+  theorem: string;
+  status: string;
+  lemmas: Lemma[];
+}
+
+// Function to generate a proof tree using OpenAI
+async function generateProofTreeWithLLM(theorem: string): Promise<ProofTree | null> {
+  try {
+    // Define system prompt for generating a proof tree
+    const systemPrompt = `You are an advanced mathematical proof assistant. 
+    Your task is to break down a mathematical theorem into a structured proof tree.
+    For the given theorem, create a hierarchical structure of lemmas needed to prove it.
+    
+    Format the response as a JSON object with the following structure:
+    {
+      "theorem": "The original theorem statement",
+      "status": "pending",
+      "lemmas": [
+        {
+          "id": "lemma-1",
+          "statement": "First key lemma statement",
+          "status": "pending",
+          "lemmas": [] // Sub-lemmas if needed
+        },
+        // More lemmas as needed
+      ]
+    }
+    
+    For each lemma, consider what sub-lemmas might be needed to prove it, and include those in a nested "lemmas" array.
+    Assign each lemma a unique ID in the format "lemma-X" or "lemma-X-Y" for nested lemmas.
+    All lemmas should have status set to "pending".
+    Ensure the proof follows a logical flow, breaking down complex concepts into simpler ones.`;
+
+    // Call OpenAI API to generate the proof tree
+    const completion = await openaiClient.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Generate a proof tree for the following theorem: "${theorem}"` }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    // Parse the response
+    const responseContent = completion.choices[0].message.content;
+    if (!responseContent) {
+      throw new Error('Empty response from OpenAI');
+    }
+
+    try {
+      const proofTree = JSON.parse(responseContent);
+      return proofTree;
+    } catch (parseError) {
+      console.error('Error parsing JSON from OpenAI response:', parseError);
+      console.log('Response content:', responseContent);
+      throw new Error('Failed to parse OpenAI response');
+    }
+  } catch (error) {
+    console.error('Error generating proof tree with LLM:', error);
+    return null;
+  }
+}
 
 // Dummy proof tree data structure for demonstration
-const dummyProofTree = {
+const dummyProofTree: ProofTree = {
   theorem: "If f is differentiable at x = a, then f is continuous at x = a",
   status: "pending",
   lemmas: [
@@ -84,7 +163,7 @@ const dummyProofTree = {
 };
 
 // Alternative proof tree for Pythagorean Theorem with multiple approaches
-const pythagoreanProofTree = {
+const pythagoreanProofTree: ProofTree = {
   theorem: "In a right triangle, the square of the hypotenuse equals the sum of squares of the other two sides (a² + b² = c²)",
   status: "pending",
   lemmas: [
@@ -160,36 +239,39 @@ const pythagoreanProofTree = {
   ]
 };
 
-export async function POST(request: Request) {
+// API route handler
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { theorem, assumptions } = body;
+    const body = await req.json();
+    const { theorem, assumptionSet } = body;
+
+    // Log for debugging
+    console.log(`Using assumption set: ${assumptionSet || 'basic'}`);
+
+    // Use LLM to generate proof tree if theorem is provided, otherwise use dummy trees
+    let proofTree: ProofTree | null;
     
-    // In a real implementation, we would use the theorem and assumptions
-    // to generate a custom proof tree based on the selected assumption set
-    console.log(`Using assumption set: ${assumptions}`);
-    
-    // If the theorem contains Pythagoras or triangle, use the Pythagorean proof tree
-    let proofTree = dummyProofTree;
-    if (theorem && (
-      theorem.toLowerCase().includes('pythagor') || 
-      (theorem.toLowerCase().includes('triangle') && theorem.toLowerCase().includes('square'))
-    )) {
-      proofTree = pythagoreanProofTree;
+    if (theorem && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10) {
+      // Use OpenAI to generate a dynamic proof tree
+      proofTree = await generateProofTreeWithLLM(theorem);
+      
+      // Fall back to dummy proof tree if LLM generation fails
+      if (!proofTree) {
+        proofTree = theorem.toLowerCase().includes('pythagoras') 
+          ? pythagoreanProofTree 
+          : dummyProofTree;
+      }
+    } else {
+      // Use predefined proof trees if no theorem is provided or no OpenAI API key
+      proofTree = (assumptionSet === 'pythagorean' || 
+                  (theorem && theorem.toLowerCase().includes('pythagoras'))) 
+        ? pythagoreanProofTree 
+        : dummyProofTree;
     }
-    
-    // Return proof tree with the requested theorem if provided
-    const customTree = {
-      ...proofTree,
-      theorem: theorem || proofTree.theorem
-    };
-    
-    return NextResponse.json(customTree);
-  } catch (err) {
-    console.error('Error generating proof tree:', err);
-    return NextResponse.json(
-      { error: 'Failed to generate proof tree' },
-      { status: 500 }
-    );
+
+    return NextResponse.json(proofTree);
+  } catch (error) {
+    console.error('Proof tree generation error:', error);
+    return NextResponse.json({ error: 'Failed to generate proof tree' }, { status: 500 });
   }
 }
