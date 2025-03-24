@@ -275,3 +275,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to generate proof tree' }, { status: 500 });
   }
 }
+
+// Configure longer timeout for this route
+export const config = {
+  maxDuration: 60, // 60 seconds timeout
+}
