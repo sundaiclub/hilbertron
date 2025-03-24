@@ -1,0 +1,10 @@
+file_advanced_algebra: advanced_algebra.pdf 
+file_id_advanced_algebra: f451ef66-ee28-4e67-b2ed-ad89e54d097b
+
+file_elementary_math: elementary_math.pdf
+file_id_elementary_math: 86010313-1126-4e5f-a090-ab2cfa26eaa9
+
+file_differential_equations: David B. Massey - Worldwide Differential Calculus-Worldwide Center of Mathematics (2009).pdf
+file_id_differential_equations: fa434b8e-bd5e-4104-9b7c-85ceaf5b9127
+
+

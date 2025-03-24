@@ -1,8 +1,11 @@
 from ai21 import AI21Client
 from openai import OpenAI
-openai_client = OpenAI(api_key='')
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-ai12_client = AI21Client(api_key="")
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+ai12_client = AI21Client(api_key=os.getenv("AI21_API_KEY"))
 
 def gpt_call(step:list[str], assumption: list[str], maestro_output):
     completion = openai_client.chat.completions.create(
