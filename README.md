@@ -1,24 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hilbertron: Mathematical Theorem Prover
+
+Hilbertron: A sophisticated theorem prover that visualizes multiple proof approaches for mathematical theorems.
+
+## Project Overview
+
+Hilbertron is an interactive web application designed for automated theorem proving in mathematics. It provides users with structured visual proof trees that demonstrate different approaches to proving mathematical theorems.
+
+## Key Features
+
+- **Multiple Proof Approaches**: Demonstrates various methods to prove the same theorem (algebraic, geometric, etc.)
+- **Interactive Proof Tree**: Visualizes the logical structure of proofs with expandable branches
+- **Verification Simulation**: Simulates the verification process for each lemma in real-time
+- **Assumption Selection**: Allows users to select different sets of mathematical assumptions
+
+## Technical Implementation
+
+### Frontend
+- Built with **Next.js 15** and **React 19** for a responsive single-page application
+- Styled using **TailwindCSS** with a serious, mathematical aesthetic
+- Uses **Geist** font family for clean typography suitable for mathematical notation
+- Implements dynamic component rendering with React hooks for state management
+
+### Backend
+- API routes implemented with Next.js serverless functions
+- Two primary endpoints:
+  - `/api/generate-proof-tree`: Creates proof structures with varying complexity
+  - `/api/verify-lemma`: Simulates verification with randomized timing and results
+
+### Proof Structure
+The application models mathematical proofs as tree structures where:
+- The theorem is the root node
+- Supporting lemmas form branches
+- Each lemma can have its own sub-lemmas
+- Multiple proof approaches can be explored in parallel branches
+
+## Use Cases
+- **Educational Tool**: Helps students understand different proof methodologies
+- **Research Aid**: Assists mathematicians in exploring multiple proof strategies
+- **Mathematical Visualization**: Transforms abstract logical structures into visual representations
+
+## Project Status
+Hilbertron is a prototype that currently includes examples for:
+- Calculus theorems (e.g., differentiability implies continuity)
+- Geometric theorems (e.g., Pythagorean theorem with three proof approaches)
+
+Launched at [Sundai Club](https://sundai.club) as an exploration of interactive mathematical tools.
 
 ## Getting Started
 
-First, run the development server:
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To build the application for production:
+
+```bash
+npm run build
+npm start
+```
 
 ## Learn More
 

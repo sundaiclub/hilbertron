@@ -53,6 +53,11 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
     try {
       setStatus('verifying');
       
+      // Get assumptions from child lemmas if they exist
+      const assumptions = lemma.lemmas ? 
+        lemma.lemmas.map(childLemma => childLemma.statement) : 
+        [];
+      
       // Call the API to verify this lemma
       const response = await fetch('/api/verify-lemma', {
         method: 'POST',
@@ -61,6 +66,8 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
         },
         body: JSON.stringify({
           lemmaId: lemma.id,
+          statement: lemma.statement,
+          assumptions: assumptions,
         }),
       });
       
@@ -78,7 +85,7 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
       console.error('Error verifying lemma:', error);
       setStatus('failed');
     }
-  }, [lemma.id]); // Add lemma.id as a dependency
+  }, [lemma.id, lemma.statement, lemma.lemmas]); // Add all lemma properties as dependencies
 
   // Verify the lemma when the component mounts if it's pending
   useEffect(() => {
