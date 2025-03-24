@@ -149,6 +149,53 @@ async function pollMaestroRun(runId: string, apiKey: string, maxAttempts = 20): 
   throw new Error(`Maestro run timed out after ${maxAttempts} attempts`);
 }
 
+async function chatGptProof(theorem: string[], assumptions: string[]): Promise<string> {
+  try {
+    if (!openaiClient.apiKey || openaiClient.apiKey.length < 10) {
+      throw new Error('OpenAI API key not found or invalid');
+    }
+    
+    console.log(`Calling ChatGPT to prove theorem: "${theorem.join(' ')}" using assumptions: ${assumptions.join(', ')}`);
+    
+    const completion = await openaiClient.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { 
+          role: "system", 
+          content: 
+            `You are a world-class mathematician specializing in formal proofs. 
+            Format your proofs with clear structure using markdown headers (## for main sections, ### for subsections).
+            Use LaTeX notation for all mathematical expressions: \\( and \\) for inline math, \\[ and \\] for block equations.`
+        },
+        { 
+          role: "user", 
+          content: 
+            `I need a formal mathematical proof for the following theorem: "${theorem.join(' ')}".
+            Please provide a detailed step-by-step proof using the following assumptions: ${assumptions.join(', ')}.
+            
+            Format the proof with:
+            1. A clear introduction explaining the approach
+            2. Step-by-step logical deductions
+            3. All mathematical notation in LaTeX format
+            4. A concise conclusion
+            
+            Do not include LaTeX document preamble like \\documentclass or \\usepackage.`
+        }
+      ],
+      temperature: 0.2, // Lower temperature for more precise mathematical reasoning
+      max_tokens: 2000,
+    });
+    
+    const proof = completion.choices[0].message.content || '';
+    console.log('ChatGPT proof generation successful');
+    
+    return proof;
+  } catch (error) {
+    console.error('Error calling ChatGPT for proof generation:', error);
+    throw error;
+  }
+}
+
 function generateDemoProof(step: string[], assumptions: string[]): string {
   const stepText = step.join(' ');
   
@@ -290,7 +337,10 @@ async function verifyLemmaWithAI(lemmaData: {
     // Extract or default assumptions
     const assumptions = lemmaData.assumptions || ['Basic mathematical axioms', 'Logical deduction rules'];
     
-    // Use real AI21 if API key is provided and valid
+    let isVerified = false;
+    let usingChatGptFallback = false;
+    
+    // Step 1: Try AI21 Maestro if available
     if (process.env.AI21LABS_API_KEY && process.env.AI21LABS_API_KEY.length > 10) {
       try {
         console.log('Using AI21 Maestro for proof generation');
@@ -300,33 +350,60 @@ async function verifyLemmaWithAI(lemmaData: {
           'math_file' // Default file ID for now
         );
         console.log('AI21 proof generation successful');
+        
+        // Verify the Maestro proof if OpenAI is available
+        if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10) {
+          console.log('Using OpenAI to verify Maestro proof');
+          isVerified = await gptCall(
+            lemmaStep,
+            assumptions,
+            proof
+          );
+          console.log(`OpenAI verification of Maestro proof: ${isVerified ? 'Verified' : 'Failed'}`);
+        } else {
+          // No OpenAI key, simulate verification
+          isVerified = Math.random() > 0.2;
+          console.log(`Simulated verification of Maestro proof: ${isVerified ? 'Verified' : 'Failed'}`);
+        }
       } catch (error) {
-        console.error('AI21 error, falling back to demo:', error);
-        proof = generateDemoProof(lemmaStep, assumptions);
+        console.error('AI21 Maestro error:', error);
+        usingChatGptFallback = true;
       }
     } else {
-      console.log('No valid AI21 API key, using demo proof generation');
-      // Fall back to simulation if no valid API key
-      proof = generateDemoProof(lemmaStep, assumptions);
+      console.log('No valid AI21 API key');
+      usingChatGptFallback = true;
     }
     
-    // For demo purposes (or if OpenAI key is not provided), we'll simulate verification
-    let isVerified = true;
+    // Step 2: If Maestro failed or verification failed, try ChatGPT
+    if (!isVerified && process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10) {
+      try {
+        console.log('Using ChatGPT for proof generation as fallback');
+        proof = await chatGptProof(lemmaStep, assumptions);
+        console.log('ChatGPT proof generation successful');
+        
+        // Verify the ChatGPT proof
+        console.log('Using OpenAI to verify ChatGPT proof');
+        isVerified = await gptCall(
+          lemmaStep,
+          assumptions,
+          proof
+        );
+        console.log(`OpenAI verification of ChatGPT proof: ${isVerified ? 'Verified' : 'Failed'}`);
+      } catch (error) {
+        console.error('ChatGPT fallback error:', error);
+      }
+    } else if (usingChatGptFallback && (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.length < 10)) {
+      console.log('No valid OpenAI API key for fallback');
+    }
     
-    // If OpenAI API key is available, actually verify the proof
-    if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10) {
-      console.log('Using OpenAI for verification');
-      isVerified = await gptCall(
-        lemmaStep,
-        assumptions,
-        proof
-      );
-      console.log(`OpenAI verification result: ${isVerified ? 'Verified' : 'Failed'}`);
-    } else {
-      console.log('No valid OpenAI API key, simulating verification');
-      // Simulate verification with 80% success rate for demo
-      isVerified = Math.random() > 0.2;
-      console.log(`Simulated verification result: ${isVerified ? 'Verified' : 'Failed'}`);
+    // Step 3: If all AI methods failed, use demo proof
+    if (!isVerified && !proof) {
+      console.log('All AI methods failed or unavailable, using demo proof');
+      proof = generateDemoProof(lemmaStep, assumptions);
+      
+      // Simulate verification for demo proof
+      isVerified = Math.random() > 0.3;
+      console.log(`Simulated verification for demo proof: ${isVerified ? 'Verified' : 'Failed'}`);
     }
     
     // Ensure we return status values that exactly match the LemmaStatus type
