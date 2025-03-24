@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/katex": "^0.16.7",
     "ai21": "^1.1.0",
+    "katex": "^0.16.21",
     "next": "15.2.3",
     "openai": "^4.89.0",
     "react": "^19.0.0",

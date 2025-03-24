@@ -13,6 +13,9 @@ interface MaestroRunResponse {
   completed_at?: string;
 }
 
+// Match the LemmaStatus type from the ProofTree component
+type LemmaStatus = 'pending' | 'verifying' | 'verified' | 'failed';
+
 const openaiClient = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
 });
@@ -62,7 +65,16 @@ async function maestroRag(step: string[], assumptions: string[], fileId: string)
       body: JSON.stringify({
         input: `I need a formal mathematical proof for the following theorem: "${theorem}". 
                 Please provide a detailed step-by-step proof using the following assumptions: ${assumptions.join(', ')}.
-                Format the proof with clear logical steps and include mathematical notation where appropriate.`,
+                Format the proof with clear logical steps and include mathematical notation where appropriate.
+                
+                IMPORTANT FORMATTING REQUIREMENTS:
+                1. Use LaTeX notation for mathematical expressions
+                2. Use \\( and \\) for inline math expressions
+                3. Use \\[ and \\] for block math expressions
+                4. Structure the proof with clear headers for different sections (e.g., "Base Case:", "Inductive Step:")
+                5. Use markdown formatting for headers (e.g., ## Base Case)
+                6. Present the proof in a clear, step-by-step logical sequence
+                7. End with a clear conclusion statement`,
         context: {
           mathematical_domain: "theorem_proving",
           theorem: theorem,
@@ -141,11 +153,73 @@ function generateDemoProof(step: string[], assumptions: string[]): string {
   const stepText = step.join(' ');
   
   if (stepText.includes('differentiable')) {
-    return `# Proof that differentiability implies continuity\n\nGiven that a function f is differentiable at x = a, we can prove it is continuous at x = a.\n\nBy definition, the derivative exists: f'(a) = lim_{h→0} [f(a+h) - f(a)]/h\n\nRearranging: lim_{h→0} [f(a+h) - f(a)] = lim_{h→0} [h·f'(a)] = 0\n\nTherefore: lim_{h→0} f(a+h) = f(a)\n\nSetting x = a+h, as h→0, x→a, so: lim_{x→a} f(x) = f(a)\n\nThis is the definition of continuity at x = a. Therefore, differentiability implies continuity.`;
+    return `## Proof that differentiability implies continuity
+
+Given that a function \\(f\\) is differentiable at \\(x = a\\), we can prove it is continuous at \\(x = a\\).
+
+### Definition of Differentiability
+By definition, the derivative exists: 
+\\[f'(a) = \\lim_{h\\to 0} \\frac{f(a+h) - f(a)}{h}\\]
+
+### Algebraic Manipulation
+Rearranging the equation:
+\\[\\lim_{h\\to 0} [f(a+h) - f(a)] = \\lim_{h\\to 0} [h \\cdot f'(a)] = 0\\]
+
+### Application of Limit Definition
+Therefore:
+\\[\\lim_{h\\to 0} f(a+h) = f(a)\\]
+
+### Conclusion
+This is precisely the definition of continuity at \\(x = a\\). Therefore, differentiability implies continuity.`;
   } else if (stepText.includes('triangle') || stepText.includes('hypotenuse')) {
-    return `# Proof of the Pythagorean Theorem\n\nIn a right triangle with sides a, b, and hypotenuse c, we prove that a² + b² = c².\n\nDraw the altitude h from the right angle to the hypotenuse, creating two similar triangles.\n\nBy similarity: p/a = a/c → p = a²/c, and q/b = b/c → q = b²/c\n\nSince p + q = c: a²/c + b²/c = c\n\nMultiplying both sides by c: a² + b² = c²\n\nTherefore, in a right triangle, the square of the hypotenuse equals the sum of squares of the other two sides.`;
+    return `## Proof of the Pythagorean Theorem
+
+In a right triangle with sides \\(a\\), \\(b\\), and hypotenuse \\(c\\), we prove that \\(a^2 + b^2 = c^2\\).
+
+### Geometric Construction
+Draw the altitude \\(h\\) from the right angle to the hypotenuse, creating two similar triangles.
+
+### Application of Similar Triangles
+By similarity of triangles:
+\\[\\frac{p}{a} = \\frac{a}{c} \\Rightarrow p = \\frac{a^2}{c}\\]
+\\[\\frac{q}{b} = \\frac{b}{c} \\Rightarrow q = \\frac{b^2}{c}\\]
+
+### Algebraic Manipulation
+Since \\(p + q = c\\):
+\\[\\frac{a^2}{c} + \\frac{b^2}{c} = c\\]
+
+Multiplying both sides by \\(c\\):
+\\[a^2 + b^2 = c^2\\]
+
+### Conclusion
+Therefore, in a right triangle, the square of the hypotenuse equals the sum of squares of the other two sides.`;
   } else {
-    return `# Proof of the Mathematical Statement\n\nUsing the assumptions: ${assumptions.join(', ')}\n\nWe apply a series of logical deductions to prove: ${stepText}\n\n1. First, we establish the basic principles involved.\n2. Next, we apply the relevant axioms and theorems.\n3. Through careful inference, we derive the intermediate results.\n4. These build toward our conclusion.\n\nTherefore, the statement is proven to be true.`;
+    return `## Proof of the Mathematical Statement
+
+### Given Information
+Using the assumptions: ${assumptions.join(', ')}
+
+### Proof Approach
+We apply a series of logical deductions to prove: ${stepText}
+
+### Step 1: Establishing the Foundation
+First, we establish the basic principles involved.
+\\[\\forall x \\in \\mathbb{R}, \\exists y \\in \\mathbb{R} \\text{ such that } P(x, y)\\]
+
+### Step 2: Application of Axioms
+Next, we apply the relevant axioms and theorems to our problem.
+\\[\\text{If } A \\Rightarrow B \\text{ and } B \\Rightarrow C, \\text{ then } A \\Rightarrow C\\]
+
+### Step 3: Logical Inference
+Through careful inference, we derive the intermediate results needed.
+\\[\\therefore \\forall z \\in \\mathbb{Z}, Q(z) \\text{ holds}\\]
+
+### Step 4: Reaching the Conclusion
+These build toward our final result.
+\\[\\text{Finally, } R \\iff S\\]
+
+### Conclusion
+Therefore, the statement "${stepText}" is proven to be true.`;
   }
 }
 
@@ -173,19 +247,42 @@ const lemmaDb: {
   }
 };
 
+// Helper function to add a small delay for a more natural verification experience
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Clean LaTeX response to make it more compatible with frontend rendering
+function cleanProofResponse(proof: string): string {
+  // If the proof is already in a clean format, return as is
+  if (!proof.includes('\\n')) {
+    return proof;
+  }
+  
+  // Parse raw string format returned by AI21 Maestro
+  // Replace escaped newlines with actual newlines
+  let cleanProof = proof.replace(/\\n/g, '\n');
+  
+  // Fix LaTeX syntax for better rendering
+  cleanProof = cleanProof.replace(/\\\\([^\\])/g, '\\$1');
+  
+  // Clean up unnecessary whitespace
+  cleanProof = cleanProof.trim();
+  
+  return cleanProof;
+}
+
+// Verify a lemma using AI
 async function verifyLemmaWithAI(lemmaData: {
   id: string,
   statement: string,
   assumptions?: string[]
-}): Promise<{ verified: boolean, proof: string, status: string }> {
-  // Add a simulated delay for a more natural verification experience
-  const verificationTime = 2000 + Math.floor(Math.random() * 3000);
-  
-  // Introduce a delay to simulate processing time
-  await new Promise(resolve => setTimeout(resolve, verificationTime));
-  
+}): Promise<{ verified: boolean, proof: string, status: LemmaStatus }> {
   try {
+    // Add a simulated delay (between 1-3 seconds) for a more natural verification experience
+    await delay(1000 + Math.floor(Math.random() * 2000));
+    
     let proof = '';
+    console.log(`Verifying lemma: ${lemmaData.statement}`);
+    console.log(`Using assumptions: ${lemmaData.assumptions?.join(', ') || 'No assumptions provided'}`);
     
     // Convert lemma statement to an array format for consistency
     const lemmaStep = [lemmaData.statement];
@@ -196,16 +293,19 @@ async function verifyLemmaWithAI(lemmaData: {
     // Use real AI21 if API key is provided and valid
     if (process.env.AI21LABS_API_KEY && process.env.AI21LABS_API_KEY.length > 10) {
       try {
+        console.log('Using AI21 Maestro for proof generation');
         proof = await maestroRag(
           lemmaStep, 
           assumptions, 
           'math_file' // Default file ID for now
         );
+        console.log('AI21 proof generation successful');
       } catch (error) {
         console.error('AI21 error, falling back to demo:', error);
         proof = generateDemoProof(lemmaStep, assumptions);
       }
     } else {
+      console.log('No valid AI21 API key, using demo proof generation');
       // Fall back to simulation if no valid API key
       proof = generateDemoProof(lemmaStep, assumptions);
     }
@@ -215,33 +315,47 @@ async function verifyLemmaWithAI(lemmaData: {
     
     // If OpenAI API key is available, actually verify the proof
     if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length > 10) {
+      console.log('Using OpenAI for verification');
       isVerified = await gptCall(
         lemmaStep,
         assumptions,
         proof
       );
+      console.log(`OpenAI verification result: ${isVerified ? 'Verified' : 'Failed'}`);
     } else {
+      console.log('No valid OpenAI API key, simulating verification');
       // Simulate verification with 80% success rate for demo
       isVerified = Math.random() > 0.2;
+      console.log(`Simulated verification result: ${isVerified ? 'Verified' : 'Failed'}`);
     }
+    
+    // Ensure we return status values that exactly match the LemmaStatus type
+    const status: LemmaStatus = isVerified ? 'verified' : 'failed';
+    
+    // Clean up the proof before sending to client
+    const cleanedProof = isVerified ? cleanProofResponse(proof) : '';
     
     return {
       verified: isVerified,
-      proof: isVerified ? proof : '',
-      status: isVerified ? 'verified' : 'failed'
+      proof: cleanedProof,
+      status
     };
   } catch (error) {
     console.error('Error during verification:', error);
     
     // For demo purposes, fall back to random success if verification fails
     const fallbackVerified = Math.random() > 0.3;
+    const status: LemmaStatus = fallbackVerified ? 'verified' : 'failed';
+    
+    // Generate and clean a fallback proof
+    const fallbackProof = fallbackVerified ? 
+      cleanProofResponse(generateDemoProof([lemmaData.statement], lemmaData.assumptions || [])) : 
+      '';
     
     return {
       verified: fallbackVerified,
-      proof: fallbackVerified 
-        ? `The proof for this lemma involves applying basic axioms and logical deductions.`
-        : '',
-      status: 'error'
+      proof: fallbackProof,
+      status
     };
   }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import MathRenderer from './MathRenderer';
 
 // Type definitions for our proof tree
 type LemmaStatus = 'pending' | 'verifying' | 'verified' | 'failed';
@@ -58,6 +59,9 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
         lemma.lemmas.map(childLemma => childLemma.statement) : 
         [];
       
+      console.log(`Verifying lemma: ${lemma.statement}`);
+      console.log(`Using assumptions: ${assumptions.join(', ') || 'No assumptions'}`);
+      
       // Call the API to verify this lemma
       const response = await fetch('/api/verify-lemma', {
         method: 'POST',
@@ -72,11 +76,20 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to verify lemma');
+        throw new Error(`Failed to verify lemma: ${response.statusText}`);
       }
       
       const data = await response.json();
-      setStatus(data.status);
+      console.log(`Verification response for "${lemma.statement}":`, data);
+      
+      // Ensure we get a valid status value 
+      if (data.status === 'verified' || data.status === 'failed') {
+        setStatus(data.status);
+      } else {
+        // Default to 'failed' for any unexpected status values
+        console.error(`Unexpected status value received: ${data.status}`);
+        setStatus('failed');
+      }
       
       if (data.verified && data.proof) {
         setProof(data.proof);
@@ -85,7 +98,7 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
       console.error('Error verifying lemma:', error);
       setStatus('failed');
     }
-  }, [lemma.id, lemma.statement, lemma.lemmas]); // Add all lemma properties as dependencies
+  }, [lemma.id, lemma.statement, lemma.lemmas]);
 
   // Verify the lemma when the component mounts if it's pending
   useEffect(() => {
@@ -98,7 +111,7 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [status, verifyLemma]); // Added verifyLemma as a dependency
+  }, [status, verifyLemma]);
 
   return (
     <div className="lemma-container mb-4">
@@ -129,7 +142,7 @@ const LemmaNode: React.FC<{ lemma: Lemma }> = ({ lemma }) => {
         {expanded && status === 'verified' && proof && (
           <div className="mt-4 p-3 bg-muted rounded border-l-2 border-accent text-sm">
             <h4 className="font-bold mb-2">Proof:</h4>
-            <p>{proof}</p>
+            <MathRenderer content={proof} />
           </div>
         )}
       </div>
