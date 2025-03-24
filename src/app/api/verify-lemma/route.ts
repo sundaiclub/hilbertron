@@ -473,3 +473,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to verify lemma', status: 'error' }, { status: 500 });
   }
 }
+
+// Configure longer timeout for this route
+export const config = {
+  maxDuration: 60, // 60 seconds timeout
+}
